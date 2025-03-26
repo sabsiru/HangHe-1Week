@@ -116,4 +116,71 @@ class PointServiceTest {
         assertEquals("존재하지 않는 사용자입니다.", e.getMessage());
     }
 
+    @Test
+    public void 포인트_사용_성공() throws Exception {
+        //given
+        UserPoint current = new UserPoint(1L, 5000L, System.currentTimeMillis());
+        when(userPointTable.selectById(1L)).thenReturn(current);
+
+        //when
+        UserPoint used = pointService.usePoint(current, 3000L);
+
+        //then
+        assertEquals(2000L, used.point());
+        assertEquals(1L, used.id());
+    }
+
+    @Test
+    public void 포인트_사용시_잔고가_0미만일시_예외발생() throws Exception {
+        //given
+        UserPoint current = new UserPoint(1L, 1000L, System.currentTimeMillis());
+        when(userPointTable.selectById(1L)).thenReturn(current);
+
+        //when
+        IllegalArgumentException e = assertThrows(IllegalArgumentException.class,
+                () -> pointService.usePoint(current, 1001L));
+
+        //then
+        assertEquals("포인트가 부족합니다.", e.getMessage());
+    }
+
+    @Test
+    public void 사용포인트가_음수일_경우_예외발생() throws Exception{
+        //given
+        UserPoint current = new UserPoint(1L, 10000L, System.currentTimeMillis());
+        when(userPointTable.selectById(1L)).thenReturn(current);
+        //when
+        IllegalArgumentException e = assertThrows(IllegalArgumentException.class,
+                () -> pointService.usePoint(current, -1000L));
+        //then
+        assertEquals("사용 금액은 1 이상이어야 합니다.", e.getMessage());
+    }
+
+    @Test
+    public void 사용포인트가_0일_경우_예외발생() throws Exception{
+        //given
+        UserPoint current = new UserPoint(1L, 10000L, System.currentTimeMillis());
+        when(userPointTable.selectById(1L)).thenReturn(current);
+        //when
+        IllegalArgumentException e = assertThrows(IllegalArgumentException.class,
+                () -> pointService.usePoint(current, 0));
+        //then
+        assertEquals("사용 금액은 1 이상이어야 합니다.", e.getMessage());
+    }
+
+    @Test
+    public void 존재하지_않는_사용자_사용시_예외발생() throws Exception {
+        // given
+        UserPoint current = UserPoint.empty(1L);
+
+        // when
+        IllegalArgumentException e = assertThrows(
+                IllegalArgumentException.class,
+                () -> pointService.usePoint(current, 1000L)
+        );
+
+        // then
+        assertEquals("존재하지 않는 사용자입니다.", e.getMessage());
+    }
+
 }
