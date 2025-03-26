@@ -22,7 +22,7 @@ public class PointService {
     //포인트 충전
     public UserPoint chargePoint(UserPoint current, long amount) {
         if (current.isEmpty()) {
-            throw new IllegalArgumentException("존재하지 않는 사용자입니다.");
+            throw new PointException("USER_NOT_FOUND","존재하지 않는 사용자입니다.");
         }
 
         UserPoint userPoint = userPointTable.selectById(current.id());
@@ -36,7 +36,7 @@ public class PointService {
     //포인트 사용
     public UserPoint usePoint(UserPoint current, long amount) {
         if (current.isEmpty()) {
-            throw new IllegalArgumentException("존재하지 않는 사용자입니다.");
+            throw new PointException("USER_NOT_FOUND","존재하지 않는 사용자입니다.");
         }
 
         UserPoint userPoint = userPointTable.selectById(current.id());
@@ -53,7 +53,7 @@ public class PointService {
         List<PointHistory> pointHistories = pointHistoryTable.selectAllByUserId(userId);
 
         if (pointHistories.isEmpty()) {
-            throw new IllegalArgumentException("포인트 충전 및 사용 내역이 없습니다.");
+            throw new PointException("POINT_HISTORY_EMPTY","포인트 충전 및 사용 내역이 없습니다.");
         }
         return pointHistories;
     }
