@@ -1,5 +1,6 @@
 package io.hhplus.tdd.point;
 
+import io.hhplus.tdd.database.PointHistoryTable;
 import io.hhplus.tdd.database.UserPointTable;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -7,13 +8,20 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.util.List;
+
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.when;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class PointServiceTest {
     @Mock
     private UserPointTable userPointTable;
+
+    @Mock
+    private PointHistoryTable pointHistoryTable;
 
     @InjectMocks
     private PointService pointService;
@@ -181,6 +189,82 @@ class PointServiceTest {
 
         // then
         assertEquals("존재하지 않는 사용자입니다.", e.getMessage());
+    }
+
+    @Test
+    public void 충전_성공시_히스토리_저장_성공() throws Exception {
+        //given
+        UserPoint current = new UserPoint(1L, 1000L, System.currentTimeMillis());
+
+        when(userPointTable.selectById(1L)).thenReturn(current);
+
+        //when
+        UserPoint charged = pointService.chargePoint(current, 3000L);
+
+        //then
+        verify(pointHistoryTable, times(1)).insert(
+                eq(1L),
+                eq(3000L),
+                eq(TransactionType.CHARGE),
+                anyLong()
+        );
+    }
+
+    @Test
+    public void 포인트_사용성공시_히스토리_저장_성공() throws Exception {
+        //given
+        UserPoint current = new UserPoint(1L, 4000L, System.currentTimeMillis());
+        when(userPointTable.selectById(1L)).thenReturn(current);
+
+        //when
+        UserPoint used = pointService.usePoint(current, 4000L);
+
+        //then
+        verify(pointHistoryTable, times(1)).insert(
+                eq(1L),
+                eq(4000L),
+                eq(TransactionType.USE),
+                anyLong()
+        );
+    }
+
+    @Test
+    public void 포인트_충전및사용_내역_조회_성공() throws Exception {
+        //given
+        long userId = 1L;
+        List<PointHistory> pointHistories = List.of(
+                new PointHistory(1L, userId, 3000L, TransactionType.CHARGE, System.currentTimeMillis()),
+                new PointHistory(2L, userId, 2000L, TransactionType.USE, System.currentTimeMillis())
+        );
+
+        when(pointHistoryTable.selectAllByUserId(userId)).thenReturn(pointHistories);
+
+        //when
+        List<PointHistory> result = pointService.getPointHistories(userId);
+
+        //then
+        assertEquals(2, result.size());
+        assertEquals(3000L, result.get(0).amount());
+        assertEquals(TransactionType.CHARGE, result.get(0).type());
+
+        assertEquals(2000L, result.get(1).amount());
+        assertEquals(TransactionType.USE, result.get(1).type());
+
+    }
+
+    @Test
+    public void 포인트_충전및사용_히스토리가_없을_경우_예외발생() throws Exception {
+        //given
+        long userId = 1L;
+        when(pointHistoryTable.selectAllByUserId(userId)).thenReturn(List.of());
+
+        //when
+        IllegalArgumentException e = assertThrows(IllegalArgumentException.class,
+                () -> pointService.getPointHistories(userId)
+        );
+
+        //then
+        assertEquals("포인트 충전 및 사용 내역이 없습니다.", e.getMessage());
     }
 
 }
