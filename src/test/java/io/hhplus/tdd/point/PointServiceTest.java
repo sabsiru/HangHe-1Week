@@ -78,7 +78,7 @@ class PointServiceTest {
         when(userPointTable.selectById(1L)).thenReturn(current);
 
         //when
-        IllegalArgumentException e = assertThrows(IllegalArgumentException.class,
+        PointException e = assertThrows(PointException.class,
                 () -> pointService.chargePoint(current, 10001L));
 
         //then
@@ -91,7 +91,7 @@ class PointServiceTest {
         UserPoint current = new UserPoint(1L, 10000L, System.currentTimeMillis());
         when(userPointTable.selectById(1L)).thenReturn(current);
         //when
-        IllegalArgumentException e = assertThrows(IllegalArgumentException.class,
+        PointException e = assertThrows(PointException.class,
                 () -> pointService.chargePoint(current, -1000L));
         //then
         assertEquals("충전 금액은 1 이상이어야 합니다.", e.getMessage());
@@ -103,7 +103,7 @@ class PointServiceTest {
         UserPoint current = new UserPoint(1L, 10000L, System.currentTimeMillis());
         when(userPointTable.selectById(1L)).thenReturn(current);
         //when
-        IllegalArgumentException e = assertThrows(IllegalArgumentException.class,
+        PointException e = assertThrows(PointException.class,
                 () -> pointService.chargePoint(current, 0));
         //then
         assertEquals("충전 금액은 1 이상이어야 합니다.", e.getMessage());
@@ -115,8 +115,8 @@ class PointServiceTest {
         UserPoint current = UserPoint.empty(1L);
 
         // when
-        IllegalArgumentException e = assertThrows(
-                IllegalArgumentException.class,
+        PointException e = assertThrows(
+                PointException.class,
                 () -> pointService.chargePoint(current, 1000L)
         );
 
@@ -145,7 +145,7 @@ class PointServiceTest {
         when(userPointTable.selectById(1L)).thenReturn(current);
 
         //when
-        IllegalArgumentException e = assertThrows(IllegalArgumentException.class,
+        PointException e = assertThrows(PointException.class,
                 () -> pointService.usePoint(current, 1001L));
 
         //then
@@ -158,7 +158,7 @@ class PointServiceTest {
         UserPoint current = new UserPoint(1L, 10000L, System.currentTimeMillis());
         when(userPointTable.selectById(1L)).thenReturn(current);
         //when
-        IllegalArgumentException e = assertThrows(IllegalArgumentException.class,
+        PointException e = assertThrows(PointException.class,
                 () -> pointService.usePoint(current, -1000L));
         //then
         assertEquals("사용 금액은 1 이상이어야 합니다.", e.getMessage());
@@ -170,7 +170,7 @@ class PointServiceTest {
         UserPoint current = new UserPoint(1L, 10000L, System.currentTimeMillis());
         when(userPointTable.selectById(1L)).thenReturn(current);
         //when
-        IllegalArgumentException e = assertThrows(IllegalArgumentException.class,
+        PointException e = assertThrows(PointException.class,
                 () -> pointService.usePoint(current, 0));
         //then
         assertEquals("사용 금액은 1 이상이어야 합니다.", e.getMessage());
@@ -182,8 +182,8 @@ class PointServiceTest {
         UserPoint current = UserPoint.empty(1L);
 
         // when
-        IllegalArgumentException e = assertThrows(
-                IllegalArgumentException.class,
+        PointException e = assertThrows(
+                PointException.class,
                 () -> pointService.usePoint(current, 1000L)
         );
 
@@ -259,7 +259,7 @@ class PointServiceTest {
         when(pointHistoryTable.selectAllByUserId(userId)).thenReturn(List.of());
 
         //when
-        IllegalArgumentException e = assertThrows(IllegalArgumentException.class,
+        PointException e = assertThrows(PointException.class,
                 () -> pointService.getPointHistories(userId)
         );
 
