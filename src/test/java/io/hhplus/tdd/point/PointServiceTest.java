@@ -48,4 +48,72 @@ class PointServiceTest {
 
     }
 
+    @Test
+    public void 포인트_충전_성공() throws Exception {
+        //given
+        UserPoint current = new UserPoint(1L, 1000L, System.currentTimeMillis());
+        when(userPointTable.selectById(1L)).thenReturn(current);
+
+        //when
+        UserPoint result = pointService.chargePoint(current, 3000L);
+
+        //then
+        assertEquals(4000L, result.point());
+        assertEquals(1L, result.id());
+
+    }
+
+    @Test
+    public void 충전시_최대한도_초과시_예외발생() throws Exception {
+        //given
+        UserPoint current = new UserPoint(1L, 90000L, System.currentTimeMillis());
+        when(userPointTable.selectById(1L)).thenReturn(current);
+
+        //when
+        IllegalArgumentException e = assertThrows(IllegalArgumentException.class,
+                () -> pointService.chargePoint(current, 10001L));
+
+        //then
+        assertEquals("충전 가능한 최대 포인트는 100,000입니다.", e.getMessage());
+    }
+
+    @Test
+    public void 충전포인트가_음수일_경우_예외발생() throws Exception{
+        //given
+        UserPoint current = new UserPoint(1L, 10000L, System.currentTimeMillis());
+        when(userPointTable.selectById(1L)).thenReturn(current);
+        //when
+        IllegalArgumentException e = assertThrows(IllegalArgumentException.class,
+                () -> pointService.chargePoint(current, -1000L));
+        //then
+        assertEquals("충전 금액은 1 이상이어야 합니다.", e.getMessage());
+    }
+
+    @Test
+    public void 충전포인트가_0일_경우_예외발생() throws Exception{
+        //given
+        UserPoint current = new UserPoint(1L, 10000L, System.currentTimeMillis());
+        when(userPointTable.selectById(1L)).thenReturn(current);
+        //when
+        IllegalArgumentException e = assertThrows(IllegalArgumentException.class,
+                () -> pointService.chargePoint(current, 0));
+        //then
+        assertEquals("충전 금액은 1 이상이어야 합니다.", e.getMessage());
+    }
+
+    @Test
+    public void 존재하지_않는_사용자_충전시_예외발생() throws Exception {
+        // given
+        UserPoint current = UserPoint.empty(1L);
+
+        // when
+        IllegalArgumentException e = assertThrows(
+                IllegalArgumentException.class,
+                () -> pointService.chargePoint(current, 1000L)
+        );
+
+        // then
+        assertEquals("존재하지 않는 사용자입니다.", e.getMessage());
+    }
+
 }
