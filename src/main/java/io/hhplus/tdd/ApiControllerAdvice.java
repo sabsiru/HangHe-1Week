@@ -17,7 +17,7 @@ class ApiControllerAdvice extends ResponseEntityExceptionHandler {
     public ResponseEntity<ErrorResponse> handlePointException(PointException e) {
         return switch (e.getCode()) {
             case "USER_NOT_FOUND" -> ResponseEntity.status(404).body(new ErrorResponse(e.getCode(), e.getMessage()));
-            case "NOT_ENOUGH_POINT", "MAX_POINT_LIMIT", "POINT_HISTORY_EMPTY" , "INVALID_AMOUNT" ->
+            case "NOT_ENOUGH_AMOUNT", "MAX_POINT_LIMIT", "POINT_HISTORY_EMPTY" , "INVALID_AMOUNT" ->
                     ResponseEntity.status(400).body(new ErrorResponse(e.getCode(), e.getMessage()));
             default -> ResponseEntity.status(400).body(new ErrorResponse("POINT_ERROR", e.getMessage()));
         };
