@@ -1,5 +1,6 @@
 package io.hhplus.tdd.point;
 
+import io.hhplus.tdd.database.PointHistoryTable;
 import io.hhplus.tdd.database.UserPointTable;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -24,19 +25,42 @@ public class PointServiceIntegrationTest {
     @Autowired
     UserPointTable userPointTable;
 
+    @Autowired
+    PointHistoryTable pointHistoryTable;
+
     @BeforeEach
     void setUp() {
         userPointTable.insertOrUpdate(1L, 5000L);
+        userPointTable.insertOrUpdate(2L, 5000L);
     }
 
     @Test
-    public void 포인트_정상조회() throws Exception{
+    public void 포인트_정상조회() throws Exception {
         mockMvc.perform(get("/point/1"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(1))
                 .andExpect(jsonPath("$.point").value(5000))
                 .andExpect(jsonPath("$.updateMillis").isNumber());
 
+    }
+
+    @Test
+    public void 사용자_ID의_TYPE이_LONG이_아닐때_예외() throws Exception{
+        mockMvc.perform(get("/point/A")
+                        .contentType(MediaType.APPLICATION_JSON)
+                )
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("INVALID_ID"))
+                .andExpect(jsonPath("$.message").value("ID는 숫자여야 합니다."));
+    }
+
+    @Test
+    public void 존재하지_않는_사용자_조회_요청시_예외발생() throws Exception{
+        mockMvc.perform(get("/point/999")
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("USER_NOT_FOUND"))
+                .andExpect(jsonPath("$.message").value("존재하지 않는 사용자입니다."));
     }
 
     @Test
@@ -51,7 +75,7 @@ public class PointServiceIntegrationTest {
     }
 
     @Test
-    public void 포인트_충전_누적_정상작동() throws Exception{
+    public void 포인트_충전_누적_정상작동() throws Exception {
         // 첫 번째 충전: 10,000 + 기본값 5,000
         mockMvc.perform(
                         patch("/point/1/charge")
@@ -73,13 +97,11 @@ public class PointServiceIntegrationTest {
 
     @Test
     public void 포인트_충전_최대한도_초과_예외발생() throws Exception {
-        //given
         mockMvc.perform(patch("/point/1/charge")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("95000"))
                 .andExpect(status().isOk());
 
-        //when
         mockMvc.perform(patch("/point/1/charge")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("1"))
@@ -90,8 +112,7 @@ public class PointServiceIntegrationTest {
     }
 
     @Test
-    public void 충전할_포인트가_0일때_예외발생() throws Exception{
-        //given
+    public void 충전할_포인트가_0일때_예외발생() throws Exception {
         mockMvc.perform(patch("/point/1/charge")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("0")
@@ -102,8 +123,7 @@ public class PointServiceIntegrationTest {
     }
 
     @Test
-    public void 충전할_포인트가_음수일때_예외발생() throws Exception{
-        //given
+    public void 충전할_포인트가_음수일때_예외발생() throws Exception {
         mockMvc.perform(patch("/point/1/charge")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("-1000")
@@ -114,7 +134,7 @@ public class PointServiceIntegrationTest {
     }
 
     @Test
-    public void 존재하지_않는_사용자_충전_요청시_예외발생() throws Exception{
+    public void 존재하지_않는_사용자_충전_요청시_예외발생() throws Exception {
         mockMvc.perform(
                         patch("/point/-1/charge")
                                 .contentType(MediaType.APPLICATION_JSON)
@@ -124,4 +144,7 @@ public class PointServiceIntegrationTest {
                 .andExpect(jsonPath("$.code").value("USER_NOT_FOUND"))
                 .andExpect(jsonPath("$.message").value("존재하지 않는 사용자입니다."));
     }
+
+
+
 }

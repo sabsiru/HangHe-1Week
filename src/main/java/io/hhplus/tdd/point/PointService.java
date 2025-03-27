@@ -14,16 +14,21 @@ public class PointService {
 
     private final PointHistoryTable pointHistoryTable;
 
+    private final PointValidator validator;
+
     //포인트 조회
     public UserPoint getUserPoint(long userId) {
+        UserPoint userPoint = userPointTable.selectById(userId);
+
+        //사용자 검증
+        validator.validateUserExists(userPoint);
+
         return userPointTable.selectById(userId);
     }
 
     //포인트 충전
     public UserPoint chargePoint(UserPoint current, long amount) {
-        if (current.isEmpty()) {
-            throw new PointException("USER_NOT_FOUND","존재하지 않는 사용자입니다.");
-        }
+        validator.validateUserExists(current);
 
         UserPoint userPoint = userPointTable.selectById(current.id());
         UserPoint charged = UserPoint.charge(userPoint, amount);
@@ -35,9 +40,7 @@ public class PointService {
 
     //포인트 사용
     public UserPoint usePoint(UserPoint current, long amount) {
-        if (current.isEmpty()) {
-            throw new PointException("USER_NOT_FOUND","존재하지 않는 사용자입니다.");
-        }
+        validator.validateUserExists(current);
 
         UserPoint userPoint = userPointTable.selectById(current.id());
         UserPoint used = UserPoint.use(userPoint, amount);
@@ -53,7 +56,7 @@ public class PointService {
         List<PointHistory> pointHistories = pointHistoryTable.selectAllByUserId(userId);
 
         if (pointHistories.isEmpty()) {
-            throw new PointException("POINT_HISTORY_EMPTY","포인트 충전 및 사용 내역이 없습니다.");
+            throw new PointException("POINT_HISTORY_EMPTY", "포인트 충전 및 사용 내역이 없습니다.");
         }
         return pointHistories;
     }
