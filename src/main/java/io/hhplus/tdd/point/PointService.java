@@ -6,15 +6,19 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.locks.ReentrantLock;
 
 @Service
 @RequiredArgsConstructor
 public class PointService {
+
     private final UserPointTable userPointTable;
-
     private final PointHistoryTable pointHistoryTable;
-
     private final PointValidator validator;
+
+    // 사용자별 락 저장소
+    private final ConcurrentHashMap<Long, ReentrantLock> locks = new ConcurrentHashMap<>();
 
     //포인트 조회
     public UserPoint getUserPoint(long userId) {
@@ -30,12 +34,20 @@ public class PointService {
     public UserPoint chargePoint(UserPoint current, long amount) {
         validator.validateUserExists(current);
 
-        UserPoint userPoint = userPointTable.selectById(current.id());
-        UserPoint charged = UserPoint.charge(userPoint, amount);
+        long userId = current.id();
+        // 락 획득 또는 생성
+        ReentrantLock lock = locks.computeIfAbsent(userId, id -> new ReentrantLock());
+        lock.lock(); // 락 시작
+        try {
+            UserPoint userPoint = userPointTable.selectById(current.id());
+            UserPoint charged = UserPoint.charge(userPoint, amount);
 
-        userPointTable.insertOrUpdate(charged.id(), charged.point());
-        pointHistoryTable.insert(charged.id(), amount, TransactionType.CHARGE, System.currentTimeMillis());
-        return charged;
+            userPointTable.insertOrUpdate(charged.id(), charged.point());
+            pointHistoryTable.insert(charged.id(), amount, TransactionType.CHARGE, System.currentTimeMillis());
+            return charged;
+        } finally {
+            lock.unlock(); // 락 해제
+        }
     }
 
     //포인트 사용
