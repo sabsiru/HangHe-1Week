@@ -12,6 +12,8 @@ import org.springframework.test.context.junit.jupiter.SpringExtension;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Queue;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -81,8 +83,8 @@ class PointServiceConcurrencyTest {
         CountDownLatch latch = new CountDownLatch(threads);
         ExecutorService executor = Executors.newFixedThreadPool(threads);
 
-        // 예외 수집용 리스트 (스레드 환경에서 안전하도록 동기화 리스트 사용)
-        List<Throwable> exceptions = Collections.synchronizedList(new ArrayList<>());
+        // 예외 수집용 리스트
+        Queue<Throwable> exceptions = new ConcurrentLinkedQueue<>();
 
         // when
         for (int i = 0; i < threads; i++) {
@@ -116,5 +118,78 @@ class PointServiceConcurrencyTest {
         }
 
         executor.shutdown(); // 리소스 정리
+    }
+
+    @Test
+    void 동시에_포인트_사용시_정상적으로_차감되어야_한다() throws InterruptedException {
+        long useAmount = 10L;
+        int threads = 100;
+
+        ExecutorService executor = Executors.newFixedThreadPool(threads);
+        CountDownLatch latch = new CountDownLatch(threads);
+        Queue<Throwable> exceptions = new ConcurrentLinkedQueue<>();
+
+        for (int i = 0; i < threads; i++) {
+            executor.execute(() -> {
+                try {
+                    pointService.usePoint(
+                            pointService.getUserPoint(USER_ID),
+                            useAmount
+                    );
+                } catch (Throwable e) {
+                    exceptions.add(e);
+                } finally {
+                    latch.countDown();
+                }
+            });
+        }
+
+        latch.await();
+        executor.shutdown();
+
+        UserPoint result = pointService.getUserPoint(USER_ID);
+        assertEquals(0L, result.point(), "최종 잔고는 0원이 되어야 함");
+        assertEquals(0, exceptions.size(), "예외가 발생해서는 안 됨");
+    }
+
+    @Test
+    void 동시_포인트_사용시_잔고가_부족하면_예외가_발생한다() throws InterruptedException {
+        // given
+        long useAmount = 20L;
+        int threads = 60;
+        ExecutorService executor = Executors.newFixedThreadPool(threads);
+        CountDownLatch latch = new CountDownLatch(threads);
+        Queue<Throwable> exceptions = new ConcurrentLinkedQueue<>();
+
+        // when
+        for (int i = 0; i < threads; i++) {
+            executor.execute(() -> {
+                try {
+                    pointService.usePoint(
+                            pointService.getUserPoint(USER_ID),
+                            useAmount
+                    );
+                } catch (Throwable e) {
+                    exceptions.add(e);
+                } finally {
+                    latch.countDown();
+                }
+            });
+        }
+
+        latch.await();
+        executor.shutdown();
+
+        // then
+        UserPoint result = pointService.getUserPoint(USER_ID);
+        assertEquals(0L, result.point(), "최종 잔고는 0원이 되어야 함");
+
+        // 예외 검증
+        assertEquals(10, exceptions.size(), "잔고 부족으로 10건의 예외가 발생해야 함");
+
+        for (Throwable e : exceptions) {
+            assertTrue(e instanceof PointException);
+            assertEquals("포인트가 부족합니다.", e.getMessage());
+        }
     }
 }

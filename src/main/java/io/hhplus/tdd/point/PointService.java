@@ -54,13 +54,21 @@ public class PointService {
     public UserPoint usePoint(UserPoint current, long amount) {
         validator.validateUserExists(current);
 
-        UserPoint userPoint = userPointTable.selectById(current.id());
-        UserPoint used = UserPoint.use(userPoint, amount);
+        long userId = current.id();
+        // 락 획득 또는 생성
+        ReentrantLock lock = locks.computeIfAbsent(userId, id -> new ReentrantLock());
+        lock.lock(); // 락 시작
+        try {
+            UserPoint userPoint = userPointTable.selectById(current.id());
+            UserPoint used = UserPoint.use(userPoint, amount);
 
-        userPointTable.insertOrUpdate(used.id(), used.point());
-        pointHistoryTable.insert(used.id(), amount, TransactionType.USE, System.currentTimeMillis());
+            userPointTable.insertOrUpdate(used.id(), used.point());
+            pointHistoryTable.insert(used.id(), amount, TransactionType.USE, System.currentTimeMillis());
 
-        return used;
+            return used;
+        } finally {
+            lock.unlock(); // 락 해제
+        }
     }
 
     //포인트 내역 조회
