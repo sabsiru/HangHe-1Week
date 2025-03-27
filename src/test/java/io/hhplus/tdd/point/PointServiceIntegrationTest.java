@@ -145,6 +145,85 @@ public class PointServiceIntegrationTest {
                 .andExpect(jsonPath("$.message").value("존재하지 않는 사용자입니다."));
     }
 
+    @Test
+    public void 포인트_정상_사용() throws Exception {
+        mockMvc.perform(
+                        patch("/point/1/use")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("1000"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(1))
+                .andExpect(jsonPath("$.point").value(4000));
 
+    }
+
+    @Test
+    public void 포인트_누적_사용_정상_작동() throws Exception {
+        // 첫 번째 사용 5000 -> 4000
+        mockMvc.perform(
+                        patch("/point/1/use")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("1000"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(1))
+                .andExpect(jsonPath("$.point").value(4000));
+
+        // 두 번째 사용 4000 - > 3000
+        mockMvc.perform(
+                        patch("/point/1/use")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("1000"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(1))
+                .andExpect(jsonPath("$.point").value(3000));
+
+    }
+
+    @Test
+    public void 포인트_사용시_잔고가_0미만일시_예외발생() throws Exception {
+        mockMvc.perform(
+                        patch("/point/1/use")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("5001"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("NOT_ENOUGH_AMOUNT"))
+                .andExpect(jsonPath("$.message").value("포인트가 부족합니다."));
+
+
+    }
+
+    @Test
+    public void 사용_포인트가_음수일_경우_예외발생() throws Exception{
+        mockMvc.perform(
+                        patch("/point/1/use")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("-100"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("INVALID_AMOUNT"))
+                .andExpect(jsonPath("$.message").value("사용 금액은 1 이상이어야 합니다."));
+
+    }
+
+    @Test
+    public void 사용_포인트가_0일_경우_예외발생() throws Exception{
+        mockMvc.perform(
+                        patch("/point/1/use")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("0"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("INVALID_AMOUNT"))
+                .andExpect(jsonPath("$.message").value("사용 금액은 1 이상이어야 합니다."));
+
+    }
+
+    @Test
+    public void 존재하지_않는_사용자_사용_요청시_예외발생() throws Exception{
+        mockMvc.perform(patch("/point/999/use")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("1000"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("USER_NOT_FOUND"))
+                .andExpect(jsonPath("$.message").value("존재하지 않는 사용자입니다."));
+    }
 
 }
