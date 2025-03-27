@@ -7,7 +7,7 @@ public record UserPoint(
 ) {
 
     public static UserPoint empty(long id) {
-        return new UserPoint(id, 0, System.currentTimeMillis());
+        return new UserPoint(id, 0, 0);
     }
 
     public static UserPoint charge(UserPoint current, long amount) {
@@ -38,6 +38,6 @@ public record UserPoint(
     }
 
     public boolean isEmpty() {
-        return this.point == 0;
+        return this.point == 0&& this.updateMillis == 0;
     }
 }
