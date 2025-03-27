@@ -53,11 +53,15 @@ public class PointService {
 
     //포인트 내역 조회
     public List<PointHistory> getPointHistories(long userId) {
+        UserPoint userPoint = userPointTable.selectById(userId);
+        //사용자 검증
+        validator.validateUserExists(userPoint);
+
         List<PointHistory> pointHistories = pointHistoryTable.selectAllByUserId(userId);
 
-        if (pointHistories.isEmpty()) {
-            throw new PointException("POINT_HISTORY_EMPTY", "포인트 충전 및 사용 내역이 없습니다.");
-        }
+        //히스토리 검증
+        validator.validateHistoryExists(pointHistories);
+
         return pointHistories;
     }
 }

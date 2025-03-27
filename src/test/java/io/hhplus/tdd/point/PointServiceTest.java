@@ -8,6 +8,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.util.Collections;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -89,7 +90,7 @@ class PointServiceTest {
     }
 
     @Test
-    public void 충전포인트가_음수일_경우_예외발생() throws Exception{
+    public void 충전포인트가_음수일_경우_예외발생() throws Exception {
         //given
         UserPoint current = new UserPoint(1L, 10000L, System.currentTimeMillis());
         when(userPointTable.selectById(1L)).thenReturn(current);
@@ -101,7 +102,7 @@ class PointServiceTest {
     }
 
     @Test
-    public void 충전포인트가_0일_경우_예외발생() throws Exception{
+    public void 충전포인트가_0일_경우_예외발생() throws Exception {
         //given
         UserPoint current = new UserPoint(1L, 10000L, System.currentTimeMillis());
         when(userPointTable.selectById(1L)).thenReturn(current);
@@ -159,7 +160,7 @@ class PointServiceTest {
     }
 
     @Test
-    public void 사용포인트가_음수일_경우_예외발생() throws Exception{
+    public void 사용포인트가_음수일_경우_예외발생() throws Exception {
         //given
         UserPoint current = new UserPoint(1L, 10000L, System.currentTimeMillis());
         when(userPointTable.selectById(1L)).thenReturn(current);
@@ -171,7 +172,7 @@ class PointServiceTest {
     }
 
     @Test
-    public void 사용포인트가_0일_경우_예외발생() throws Exception{
+    public void 사용포인트가_0일_경우_예외발생() throws Exception {
         //given
         UserPoint current = new UserPoint(1L, 10000L, System.currentTimeMillis());
         when(userPointTable.selectById(1L)).thenReturn(current);
@@ -263,17 +264,22 @@ class PointServiceTest {
 
     @Test
     public void 포인트_충전및사용_히스토리가_없을_경우_예외발생() throws Exception {
-        //given
+        // given
         long userId = 1L;
-        when(pointHistoryTable.selectAllByUserId(userId)).thenReturn(List.of());
+        UserPoint userPoint = new UserPoint(userId, 1000L, System.currentTimeMillis());
 
-        //when
-        PointException e = assertThrows(PointException.class,
-                () -> pointService.getPointHistories(userId)
-        );
+        when(userPointTable.selectById(eq(userId))).thenReturn(userPoint);
+        when(pointHistoryTable.selectAllByUserId(eq(userId))).thenReturn(Collections.emptyList());
 
-        //then
+        doThrow(new PointException("POINT_HISTORY_EMPTY", "포인트 충전 및 사용 내역이 없습니다."))
+                .when(validator).validateHistoryExists(Collections.emptyList());
+
+        // when
+        PointException e = assertThrows(PointException.class, () -> {
+            pointService.getPointHistories(userId);
+        });
+
+        // then
         assertEquals("포인트 충전 및 사용 내역이 없습니다.", e.getMessage());
     }
-
 }
