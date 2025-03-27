@@ -32,12 +32,14 @@ class PointServiceConcurrencyTest {
     private ExecutorService executor;
 
     // 테스트에 사용할 사용자 ID
-    private static final long USER_ID = 1L;
+    private static final long USER_ID = 5L;
+    private static final long USER_ID2 = 6L;
 
     @BeforeEach
     void setup() {
         // 초기 포인트 1000L로 직접 세팅 (비즈니스 로직 생략)
         userPointTable.insertOrUpdate(USER_ID, 1000L);
+        userPointTable.insertOrUpdate(USER_ID2, 1000L);
     }
 
     @Test
@@ -204,7 +206,7 @@ class PointServiceConcurrencyTest {
             executor.execute(() -> {
                 try {
                     pointService.chargePoint(
-                            pointService.getUserPoint(USER_ID),
+                            pointService.getUserPoint(USER_ID2),
                             chargeAmount
                     );
                 } finally {
@@ -217,7 +219,7 @@ class PointServiceConcurrencyTest {
         executor.shutdown();
 
         // then
-        List<PointHistory> histories = pointService.getPointHistories(USER_ID);
+        List<PointHistory> histories = pointService.getPointHistories(USER_ID2);
         assertEquals(threads, histories.size(), "히스토리는 충전 요청 수와 같아야 한다.");
     }
 
@@ -225,7 +227,7 @@ class PointServiceConcurrencyTest {
     void 혼합요청_히스토리와_예외_정확히처리(RepetitionInfo info) throws InterruptedException {
         // given
         //반복 테스트를 위해 데이터 격리를 위하여 userId 새로 선언
-        long userId = info.getCurrentRepetition();
+        long userId = info.getCurrentRepetition()+10;
         userPointTable.insertOrUpdate(userId, 1000L);
 
         int chargeThreads = 30;
@@ -294,5 +296,70 @@ class PointServiceConcurrencyTest {
             assertTrue(e instanceof PointException);
             assertEquals("포인트가 부족합니다.", e.getMessage());
         }
+    }
+
+    @Test
+    void 다중사용자_혼합요청_정상처리() throws InterruptedException {
+        // given
+        int users = 3;
+        int chargePerUser = 5;
+        int usePerUser = 10;
+        int totalThreads = users * (chargePerUser + usePerUser); // 45
+        long chargeAmount = 100L;
+        long useAmount = 100L;
+
+        ExecutorService executor = Executors.newFixedThreadPool(totalThreads);
+        CountDownLatch latch = new CountDownLatch(totalThreads);
+        Queue<Throwable> exceptions = new ConcurrentLinkedQueue<>();
+
+        // 사용자 초기화 (1000L)
+        for (long userId = 1L; userId <= users; userId++) {
+            userPointTable.insertOrUpdate(userId, 1000L);
+        }
+
+        // when: 사용자별로 충전 5회, 사용 10회 동시 실행
+        for (long userId = 1L; userId <= users; userId++) {
+            for (int i = 0; i < chargePerUser; i++) {
+                long finalUserId = userId;
+                executor.execute(() -> {
+                    try {
+                        pointService.chargePoint(
+                                pointService.getUserPoint(finalUserId),
+                                chargeAmount
+                        );
+                    } catch (Throwable e) {
+                        exceptions.add(e);
+                    } finally {
+                        latch.countDown();
+                    }
+                });
+            }
+            for (int i = 0; i < usePerUser; i++) {
+                long finalUserId1 = userId;
+                executor.execute(() -> {
+                    try {
+                        pointService.usePoint(
+                                pointService.getUserPoint(finalUserId1),
+                                useAmount
+                        );
+                    } catch (Throwable e) {
+                        exceptions.add(e);
+                    } finally {
+                        latch.countDown();
+                    }
+                });
+            }
+        }
+
+        latch.await();
+        executor.shutdown();
+
+        // then: 사용자별 예상 포인트 = 1000 + 5×100 - 10×100 = 500
+        for (long userId = 1L; userId <= users; userId++) {
+            UserPoint result = pointService.getUserPoint(userId);
+            assertEquals(500L, result.point(), "userId=" + userId + " 의 최종 포인트 불일치");
+        }
+
+        assertEquals(0, exceptions.size(), "예외가 발생해서는 안됨");
     }
 }
