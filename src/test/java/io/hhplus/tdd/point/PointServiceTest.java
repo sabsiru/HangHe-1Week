@@ -23,6 +23,9 @@ class PointServiceTest {
     @Mock
     private PointHistoryTable pointHistoryTable;
 
+    @Mock
+    private PointValidator validator;
+
     @InjectMocks
     private PointService pointService;
 
@@ -112,12 +115,15 @@ class PointServiceTest {
     @Test
     public void 존재하지_않는_사용자_충전시_예외발생() throws Exception {
         // given
-        UserPoint current = UserPoint.empty(1L);
+        long userId = 1L;
+        UserPoint current = UserPoint.empty(userId);
+
+        doThrow(new PointException("USER_NOT_FOUND", "존재하지 않는 사용자입니다."))
+                .when(validator).validateUserExists(current);
 
         // when
-        PointException e = assertThrows(
-                PointException.class,
-                () -> pointService.chargePoint(current, 1000L)
+        PointException e = assertThrows(PointException.class, () ->
+                pointService.chargePoint(current, 1000L)
         );
 
         // then
@@ -179,12 +185,15 @@ class PointServiceTest {
     @Test
     public void 존재하지_않는_사용자_사용시_예외발생() throws Exception {
         // given
-        UserPoint current = UserPoint.empty(1L);
+        long userId = 1L;
+        UserPoint current = UserPoint.empty(userId);
+
+        doThrow(new PointException("USER_NOT_FOUND", "존재하지 않는 사용자입니다."))
+                .when(validator).validateUserExists(current);
 
         // when
-        PointException e = assertThrows(
-                PointException.class,
-                () -> pointService.usePoint(current, 1000L)
+        PointException e = assertThrows(PointException.class, () ->
+                pointService.usePoint(current, 1000L)
         );
 
         // then
