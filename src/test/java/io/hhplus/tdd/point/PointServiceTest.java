@@ -8,6 +8,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.util.Collections;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -22,6 +23,9 @@ class PointServiceTest {
 
     @Mock
     private PointHistoryTable pointHistoryTable;
+
+    @Mock
+    private PointValidator validator;
 
     @InjectMocks
     private PointService pointService;
@@ -78,7 +82,7 @@ class PointServiceTest {
         when(userPointTable.selectById(1L)).thenReturn(current);
 
         //when
-        IllegalArgumentException e = assertThrows(IllegalArgumentException.class,
+        PointException e = assertThrows(PointException.class,
                 () -> pointService.chargePoint(current, 10001L));
 
         //then
@@ -86,24 +90,24 @@ class PointServiceTest {
     }
 
     @Test
-    public void 충전포인트가_음수일_경우_예외발생() throws Exception{
+    public void 충전포인트가_음수일_경우_예외발생() throws Exception {
         //given
         UserPoint current = new UserPoint(1L, 10000L, System.currentTimeMillis());
         when(userPointTable.selectById(1L)).thenReturn(current);
         //when
-        IllegalArgumentException e = assertThrows(IllegalArgumentException.class,
+        PointException e = assertThrows(PointException.class,
                 () -> pointService.chargePoint(current, -1000L));
         //then
         assertEquals("충전 금액은 1 이상이어야 합니다.", e.getMessage());
     }
 
     @Test
-    public void 충전포인트가_0일_경우_예외발생() throws Exception{
+    public void 충전포인트가_0일_경우_예외발생() throws Exception {
         //given
         UserPoint current = new UserPoint(1L, 10000L, System.currentTimeMillis());
         when(userPointTable.selectById(1L)).thenReturn(current);
         //when
-        IllegalArgumentException e = assertThrows(IllegalArgumentException.class,
+        PointException e = assertThrows(PointException.class,
                 () -> pointService.chargePoint(current, 0));
         //then
         assertEquals("충전 금액은 1 이상이어야 합니다.", e.getMessage());
@@ -112,12 +116,15 @@ class PointServiceTest {
     @Test
     public void 존재하지_않는_사용자_충전시_예외발생() throws Exception {
         // given
-        UserPoint current = UserPoint.empty(1L);
+        long userId = 1L;
+        UserPoint current = UserPoint.empty(userId);
+
+        doThrow(new PointException("USER_NOT_FOUND", "존재하지 않는 사용자입니다."))
+                .when(validator).validateUserExists(current);
 
         // when
-        IllegalArgumentException e = assertThrows(
-                IllegalArgumentException.class,
-                () -> pointService.chargePoint(current, 1000L)
+        PointException e = assertThrows(PointException.class, () ->
+                pointService.chargePoint(current, 1000L)
         );
 
         // then
@@ -145,7 +152,7 @@ class PointServiceTest {
         when(userPointTable.selectById(1L)).thenReturn(current);
 
         //when
-        IllegalArgumentException e = assertThrows(IllegalArgumentException.class,
+        PointException e = assertThrows(PointException.class,
                 () -> pointService.usePoint(current, 1001L));
 
         //then
@@ -153,24 +160,24 @@ class PointServiceTest {
     }
 
     @Test
-    public void 사용포인트가_음수일_경우_예외발생() throws Exception{
+    public void 사용포인트가_음수일_경우_예외발생() throws Exception {
         //given
         UserPoint current = new UserPoint(1L, 10000L, System.currentTimeMillis());
         when(userPointTable.selectById(1L)).thenReturn(current);
         //when
-        IllegalArgumentException e = assertThrows(IllegalArgumentException.class,
+        PointException e = assertThrows(PointException.class,
                 () -> pointService.usePoint(current, -1000L));
         //then
         assertEquals("사용 금액은 1 이상이어야 합니다.", e.getMessage());
     }
 
     @Test
-    public void 사용포인트가_0일_경우_예외발생() throws Exception{
+    public void 사용포인트가_0일_경우_예외발생() throws Exception {
         //given
         UserPoint current = new UserPoint(1L, 10000L, System.currentTimeMillis());
         when(userPointTable.selectById(1L)).thenReturn(current);
         //when
-        IllegalArgumentException e = assertThrows(IllegalArgumentException.class,
+        PointException e = assertThrows(PointException.class,
                 () -> pointService.usePoint(current, 0));
         //then
         assertEquals("사용 금액은 1 이상이어야 합니다.", e.getMessage());
@@ -179,12 +186,15 @@ class PointServiceTest {
     @Test
     public void 존재하지_않는_사용자_사용시_예외발생() throws Exception {
         // given
-        UserPoint current = UserPoint.empty(1L);
+        long userId = 1L;
+        UserPoint current = UserPoint.empty(userId);
+
+        doThrow(new PointException("USER_NOT_FOUND", "존재하지 않는 사용자입니다."))
+                .when(validator).validateUserExists(current);
 
         // when
-        IllegalArgumentException e = assertThrows(
-                IllegalArgumentException.class,
-                () -> pointService.usePoint(current, 1000L)
+        PointException e = assertThrows(PointException.class, () ->
+                pointService.usePoint(current, 1000L)
         );
 
         // then
@@ -254,17 +264,22 @@ class PointServiceTest {
 
     @Test
     public void 포인트_충전및사용_히스토리가_없을_경우_예외발생() throws Exception {
-        //given
+        // given
         long userId = 1L;
-        when(pointHistoryTable.selectAllByUserId(userId)).thenReturn(List.of());
+        UserPoint userPoint = new UserPoint(userId, 1000L, System.currentTimeMillis());
 
-        //when
-        IllegalArgumentException e = assertThrows(IllegalArgumentException.class,
-                () -> pointService.getPointHistories(userId)
-        );
+        when(userPointTable.selectById(eq(userId))).thenReturn(userPoint);
+        when(pointHistoryTable.selectAllByUserId(eq(userId))).thenReturn(Collections.emptyList());
 
-        //then
+        doThrow(new PointException("POINT_HISTORY_EMPTY", "포인트 충전 및 사용 내역이 없습니다."))
+                .when(validator).validateHistoryExists(Collections.emptyList());
+
+        // when
+        PointException e = assertThrows(PointException.class, () -> {
+            pointService.getPointHistories(userId);
+        });
+
+        // then
         assertEquals("포인트 충전 및 사용 내역이 없습니다.", e.getMessage());
     }
-
 }

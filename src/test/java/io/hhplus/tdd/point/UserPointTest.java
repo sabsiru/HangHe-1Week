@@ -28,7 +28,7 @@ class UserPointTest {
         UserPoint userPoint = new UserPoint(1L, 90000L, System.currentTimeMillis());
 
         //when
-        IllegalArgumentException e = assertThrows(IllegalArgumentException.class,
+        PointException e = assertThrows(PointException.class,
                 () -> UserPoint.charge(userPoint, 10001L)
         );
 
@@ -43,7 +43,7 @@ class UserPointTest {
         UserPoint userPoint = new UserPoint(1L, 5000L, System.currentTimeMillis());
 
         //when
-        IllegalArgumentException e = assertThrows(IllegalArgumentException.class,
+        PointException e = assertThrows(PointException.class,
                 () -> userPoint.charge(userPoint, -1000L)
         );
 
@@ -57,7 +57,7 @@ class UserPointTest {
         UserPoint userPoint = new UserPoint(1L, 5000L, System.currentTimeMillis());
 
         //when
-        IllegalArgumentException e = assertThrows(IllegalArgumentException.class,
+        PointException e = assertThrows(PointException.class,
                 () -> userPoint.charge(userPoint, 0)
         );
 
@@ -84,7 +84,7 @@ class UserPointTest {
         UserPoint userPoint = new UserPoint(1L, 5000L, System.currentTimeMillis());
 
         //when
-        IllegalArgumentException e = assertThrows(IllegalArgumentException.class,
+        PointException e = assertThrows(PointException.class,
                 () -> UserPoint.use(userPoint, 5001L)
         );
 
@@ -99,7 +99,7 @@ class UserPointTest {
         UserPoint userPoint = new UserPoint(1L, 5000L, System.currentTimeMillis());
 
         //when
-        IllegalArgumentException e = assertThrows(IllegalArgumentException.class,
+        PointException e = assertThrows(PointException.class,
                 () -> userPoint.use(userPoint, -1000L)
         );
 
@@ -113,7 +113,7 @@ class UserPointTest {
         UserPoint userPoint = new UserPoint(1L, 5000L, System.currentTimeMillis());
 
         //when
-        IllegalArgumentException e = assertThrows(IllegalArgumentException.class,
+        PointException e = assertThrows(PointException.class,
                 () -> userPoint.use(userPoint, 0)
         );
 

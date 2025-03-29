@@ -184,6 +184,6 @@ public void update() {
 
 단점
 •	재진입 불가 (복잡한 흐름 제어 어려움)
-•	사용법이 다소 까다로움
+•	사용법이 다소 까다로움 
 
 실무 사용: CPU-bound 로직이 많고 read-heavy한 구조에서 사용됨 (ex. high-read-low-write cache)
