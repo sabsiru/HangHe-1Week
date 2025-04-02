@@ -187,3 +187,14 @@ public void update() {
 •	사용법이 다소 까다로움 
 
 실무 사용: CPU-bound 로직이 많고 read-heavy한 구조에서 사용됨 (ex. high-read-low-write cache)
+
+---
+# test
+
+### ![클래스다이어그램 이미지](docs/test/charge_balance.png)
+
+## 잔액 충전
+<details>
+<summary>펼치기</summary>
+    <img src="docs/test/charge_balance.png">
+</details>
